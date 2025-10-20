@@ -188,8 +188,8 @@ export class GentlNode {
         const stat = await fs.stat(filePath);
         
         if (stat.isFile()) {
-          // ファイル名（拡張子なし）をキーとして使用
-          const key = path.parse(file).name;
+          // ファイル名（拡張子あり）をキーとして使用
+          const key = file;
           includeIo[key] = async (baseData?: object) => {
             // baseDataは現在使用していないが、将来的な拡張に備えてパラメーターを受け取る
             return await fs.readFile(filePath, 'utf-8');
