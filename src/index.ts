@@ -8,13 +8,22 @@ import { process as gentlProcess, type GentlJInput, type GentlJOptions } from '@
  * jsdomとNodeのファイルシステムを利用
  */
 export class GentlNode {
+  private rootDir: string;
   private includeDir?: string;
   private options: Partial<GentlJOptions>;
 
-  constructor(options?: Partial<GentlJOptions> & { includeDirectory?: string }) {
+  constructor(rootDirectory: string, options?: Partial<GentlJOptions> & { includeDirectory?: string }) {
+    if (!rootDirectory) {
+      throw new Error('Root directory is required');
+    }
+    
+    this.rootDir = path.resolve(rootDirectory);
+    
     const { includeDirectory, ...gentlOptions } = options || {};
     
-    this.includeDir = includeDirectory;
+    // includeDirectoryが指定されている場合、ルートディレクトリからの相対パスとして処理
+    this.includeDir = includeDirectory ? path.resolve(this.rootDir, includeDirectory) : undefined;
+    
     this.options = {
       deleteTemplateTag: true,
       deleteDataAttributes: true,
@@ -25,18 +34,38 @@ export class GentlNode {
   }
 
   /**
+   * パスがルートディレクトリ内にあるかを検証
+   */
+  private validatePath(filePath: string, description: string): string {
+    const resolvedPath = path.resolve(this.rootDir, filePath);
+    const relativePath = path.relative(this.rootDir, resolvedPath);
+    
+    // パスがルートディレクトリの外に出ていないかチェック
+    if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
+      throw new Error(`${description} must be within the root directory: ${this.rootDir}`);
+    }
+    
+    return resolvedPath;
+  }
+
+  /**
    * 単一のHTMLファイルを生成
-   * @param templatePath HTMLテンプレートファイルのパス
-   * @param dataPath JSONデータファイルのパス
-   * @param outputPath 出力ファイルのパス
+   * @param templatePath HTMLテンプレートファイルのパス（ルートディレクトリからの相対パス）
+   * @param dataPath JSONデータファイルのパス（ルートディレクトリからの相対パス）
+   * @param outputPath 出力ファイルのパス（ルートディレクトリからの相対パス）
    */
   async generateFile(templatePath: string, dataPath: string, outputPath: string): Promise<void> {
     try {
+      // パスを検証し、ルートディレクトリ内の絶対パスに変換
+      const resolvedTemplatePath = this.validatePath(templatePath, 'Template path');
+      const resolvedDataPath = this.validatePath(dataPath, 'Data path');
+      const resolvedOutputPath = this.validatePath(outputPath, 'Output path');
+
       // テンプレートファイルを読み込み
-      const html = await fs.readFile(templatePath, 'utf-8');
+      const html = await fs.readFile(resolvedTemplatePath, 'utf-8');
       
       // データファイルを読み込み
-      const dataContent = await fs.readFile(dataPath, 'utf-8');
+      const dataContent = await fs.readFile(resolvedDataPath, 'utf-8');
       const data = JSON.parse(dataContent);
 
       // includeIoの設定
@@ -52,11 +81,11 @@ export class GentlNode {
       const result = await gentlProcess(input, this.options);
 
       // 出力ディレクトリを作成（存在しない場合）
-      const outputDir = path.dirname(outputPath);
+      const outputDir = path.dirname(resolvedOutputPath);
       await fs.mkdir(outputDir, { recursive: true });
 
       // 結果をファイルに書き込み
-      await fs.writeFile(outputPath, result.html, 'utf-8');
+      await fs.writeFile(resolvedOutputPath, result.html, 'utf-8');
 
     } catch (error) {
       throw new Error(`Failed to generate file: ${error}`);
@@ -65,18 +94,23 @@ export class GentlNode {
 
   /**
    * 複数のHTMLファイルを生成
-   * @param templatePath HTMLテンプレートファイルのパス
-   * @param dataPath JSONファイルが格納されているディレクトリのパス
-   * @param outputDir 出力ディレクトリのパス
+   * @param templatePath HTMLテンプレートファイルのパス（ルートディレクトリからの相対パス）
+   * @param dataPath JSONファイルが格納されているディレクトリのパス（ルートディレクトリからの相対パス）
+   * @param outputDir 出力ディレクトリのパス（ルートディレクトリからの相対パス）
    * @param namingRule ファイル命名規則（例: "page-{index}.html", "item-{data.id}.html"）
    */
   async generateFiles(templatePath: string, dataPath: string, outputDir: string, namingRule: string): Promise<string[]> {
     try {
+      // パスを検証し、ルートディレクトリ内の絶対パスに変換
+      const resolvedTemplatePath = this.validatePath(templatePath, 'Template path');
+      const resolvedDataPath = this.validatePath(dataPath, 'Data path');
+      const resolvedOutputDir = this.validatePath(outputDir, 'Output directory');
+
       // テンプレートファイルを読み込み
-      const html = await fs.readFile(templatePath, 'utf-8');
+      const html = await fs.readFile(resolvedTemplatePath, 'utf-8');
       
       // データディレクトリ内のJSONファイルを読み込み
-      const dataFiles = await fs.readdir(dataPath);
+      const dataFiles = await fs.readdir(resolvedDataPath);
       const jsonFiles = dataFiles.filter(file => path.extname(file).toLowerCase() === '.json');
 
       if (jsonFiles.length === 0) {
@@ -87,14 +121,14 @@ export class GentlNode {
       const includeIo = await this.buildIncludeIo();
 
       // 出力ディレクトリを作成
-      await fs.mkdir(outputDir, { recursive: true });
+      await fs.mkdir(resolvedOutputDir, { recursive: true });
 
       const generatedFiles: string[] = [];
 
       // 各JSONファイルに対してHTMLファイルを生成
       for (let index = 0; index < jsonFiles.length; index++) {
         const jsonFile = jsonFiles[index];
-        const jsonFilePath = path.join(dataPath, jsonFile);
+        const jsonFilePath = path.join(resolvedDataPath, jsonFile);
         
         // JSONファイルを読み込み
         const dataContent = await fs.readFile(jsonFilePath, 'utf-8');
@@ -106,7 +140,7 @@ export class GentlNode {
           data,
           fileName: path.parse(jsonFile).name // JSONファイル名（拡張子なし）も利用可能
         });
-        const outputPath = path.join(outputDir, filename);
+        const outputPath = path.join(resolvedOutputDir, filename);
 
         // gentlで処理
         const input: GentlJInput = {
@@ -119,7 +153,10 @@ export class GentlNode {
 
         // 結果をファイルに書き込み
         await fs.writeFile(outputPath, result.html, 'utf-8');
-        generatedFiles.push(outputPath);
+        
+        // 相対パスで返却
+        const relativeOutputPath = path.relative(this.rootDir, outputPath);
+        generatedFiles.push(relativeOutputPath);
       }
 
       return generatedFiles;

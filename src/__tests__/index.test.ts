@@ -1,15 +1,21 @@
 import { GentlNode } from '../index';
+import * as path from 'path';
 
 describe('GentlNode', () => {
   let gentlNode: GentlNode;
+  const testRootDir = path.resolve('./test-root');
 
   beforeEach(() => {
-    gentlNode = new GentlNode();
+    gentlNode = new GentlNode(testRootDir);
   });
 
   describe('constructor', () => {
-    it('should create an instance of GentlNode', () => {
+    it('should create an instance of GentlNode with root directory', () => {
       expect(gentlNode).toBeInstanceOf(GentlNode);
+    });
+
+    it('should throw error if root directory is not provided', () => {
+      expect(() => new GentlNode('')).toThrow('Root directory is required');
     });
 
     it('should accept options in constructor', () => {
@@ -17,16 +23,16 @@ describe('GentlNode', () => {
         deleteTemplateTag: false,
         deleteDataAttributes: false
       };
-      const customGentlNode = new GentlNode(options);
+      const customGentlNode = new GentlNode(testRootDir, options);
       expect(customGentlNode).toBeInstanceOf(GentlNode);
     });
 
     it('should accept includeDirectory in constructor', () => {
       const options = {
-        includeDirectory: '/path/to/includes',
+        includeDirectory: 'includes',
         deleteTemplateTag: false
       };
-      const customGentlNode = new GentlNode(options);
+      const customGentlNode = new GentlNode(testRootDir, options);
       expect(customGentlNode).toBeInstanceOf(GentlNode);
     });
   });
