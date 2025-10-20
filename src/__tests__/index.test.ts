@@ -35,6 +35,27 @@ describe('GentlNode', () => {
       const customGentlNode = new GentlNode(testRootDir, options);
       expect(customGentlNode).toBeInstanceOf(GentlNode);
     });
+
+    it('should accept custom logger in constructor', () => {
+      const mockLogger = jest.fn();
+      const options = {
+        logger: mockLogger,
+        deleteTemplateTag: false
+      };
+      const customGentlNode = new GentlNode(testRootDir, options);
+      expect(customGentlNode).toBeInstanceOf(GentlNode);
+    });
+
+    it('should use default logger when no logger provided', () => {
+      const consoleSpy = jest.spyOn(console, 'info').mockImplementation();
+      const gentlNodeWithDefaultLogger = new GentlNode(testRootDir);
+      
+      // デフォルトロガーが設定されていることを確認するため、
+      // 実際にはprivateメソッドなのでインスタンスが作成できることで確認
+      expect(gentlNodeWithDefaultLogger).toBeInstanceOf(GentlNode);
+      
+      consoleSpy.mockRestore();
+    });
   });
 
   describe('generateFile', () => {

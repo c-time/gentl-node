@@ -7,6 +7,22 @@ import { process as gentlProcess, type GentlJInput, type GentlJOptions } from '@
 type IncludeIoFunction = (baseData?: object) => Promise<string>;
 type IncludeIo = Record<string, IncludeIoFunction>;
 
+// Logger型定義（gentlパッケージから）
+type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+interface LogEntry {
+  level: LogLevel;
+  message: string;
+  context?: {
+    element?: string;
+    attribute?: string;
+    formula?: string;
+    data?: any;
+    error?: Error;
+  };
+  timestamp: Date;
+}
+type Logger = (entry: LogEntry) => void;
+
 /**
  * Node.js環境でのウェブサイトテンプレートファイル処理ライブラリ
  * jsdomとNodeのファイルシステムを利用
@@ -16,26 +32,85 @@ export class GentlNode {
   private includeDir?: string;
   private options: Partial<GentlJOptions>;
   private fileContentCache: Record<string, string> = {}; // ファイル内容のキャッシュ
+  private logger: Logger;
 
-  constructor(rootDirectory: string, options?: Partial<GentlJOptions> & { includeDirectory?: string }) {
+  constructor(rootDirectory: string, options?: Partial<GentlJOptions> & { includeDirectory?: string; logger?: Logger }) {
     if (!rootDirectory) {
       throw new Error('Root directory is required');
     }
     
     this.rootDir = path.resolve(rootDirectory);
     
-    const { includeDirectory, ...gentlOptions } = options || {};
+    const { includeDirectory, logger, ...gentlOptions } = options || {};
     
     // includeDirectoryが指定されている場合、ルートディレクトリからの相対パスとして処理
     this.includeDir = includeDirectory ? path.resolve(this.rootDir, includeDirectory) : undefined;
+    
+    // ログ機能の設定（デフォルトロガーまたはカスタムロガー）
+    this.logger = logger || this.createDefaultLogger();
     
     this.options = {
       deleteTemplateTag: true,
       deleteDataAttributes: true,
       rootParserType: 'htmlDocument',
       domEnvironment: JSDOM as any,
+      logger: this.logger, // gentlにもloggerを渡す
       ...gentlOptions
     };
+  }
+
+  /**
+   * デフォルトロガーを作成
+   */
+  private createDefaultLogger(): Logger {
+    return (entry: LogEntry) => {
+      const timestamp = entry.timestamp.toISOString();
+      const level = entry.level.toUpperCase().padEnd(5);
+      let message = `[${timestamp}] ${level} ${entry.message}`;
+      
+      if (entry.context) {
+        const contextParts: string[] = [];
+        if (entry.context.element) contextParts.push(`element: ${entry.context.element}`);
+        if (entry.context.attribute) contextParts.push(`attribute: ${entry.context.attribute}`);
+        if (entry.context.formula) contextParts.push(`formula: ${entry.context.formula}`);
+        if (entry.context.data) contextParts.push(`data: ${JSON.stringify(entry.context.data)}`);
+        if (entry.context.error) contextParts.push(`error: ${entry.context.error.message}`);
+        
+        if (contextParts.length > 0) {
+          message += ` (${contextParts.join(', ')})`;
+        }
+      }
+      
+      // レベルに応じてコンソール出力を変更
+      switch (entry.level) {
+        case 'error':
+          console.error(message);
+          break;
+        case 'warn':
+          console.warn(message);
+          break;
+        case 'info':
+          console.info(message);
+          break;
+        case 'debug':
+          console.debug(message);
+          break;
+        default:
+          console.log(message);
+      }
+    };
+  }
+
+  /**
+   * ログエントリを作成してロガーに送信
+   */
+  private log(level: LogLevel, message: string, context?: Partial<LogEntry['context']>): void {
+    this.logger({
+      level,
+      message,
+      context,
+      timestamp: new Date()
+    });
   }
 
   /**
@@ -60,21 +135,34 @@ export class GentlNode {
    * @param outputPath 出力ファイルのパス（ルートディレクトリからの相対パス）
    */
   async generateFile(templatePath: string, dataPath: string, outputPath: string): Promise<void> {
+    this.log('info', `Starting file generation`, {
+      data: { templatePath, dataPath, outputPath }
+    });
+
     try {
       // パスを検証し、ルートディレクトリ内の絶対パスに変換
       const resolvedTemplatePath = this.validatePath(templatePath, 'Template path');
       const resolvedDataPath = this.validatePath(dataPath, 'Data path');
       const resolvedOutputPath = this.validatePath(outputPath, 'Output path');
 
+      this.log('debug', `Paths resolved`, {
+        data: { resolvedTemplatePath, resolvedDataPath, resolvedOutputPath }
+      });
+
       // テンプレートファイルを読み込み
       const html = await fs.readFile(resolvedTemplatePath, 'utf-8');
+      this.log('debug', `Template file loaded: ${templatePath}`);
       
       // データファイルを読み込み
       const dataContent = await fs.readFile(resolvedDataPath, 'utf-8');
       const data = JSON.parse(dataContent);
+      this.log('debug', `Data file loaded and parsed: ${dataPath}`);
 
       // includeIoの設定
       const includeIo = await this.buildIncludeIo();
+      if (includeIo) {
+        this.log('debug', `Include files loaded: ${Object.keys(includeIo).length} files`);
+      }
 
       // gentlで処理
       const input: GentlJInput = {
@@ -83,6 +171,7 @@ export class GentlNode {
         includeIo
       };
 
+      this.log('debug', `Processing template with gentl`);
       const result = await gentlProcess(input, this.options);
 
       // 出力ディレクトリを作成（存在しない場合）
@@ -91,8 +180,14 @@ export class GentlNode {
 
       // 結果をファイルに書き込み
       await fs.writeFile(resolvedOutputPath, result.html, 'utf-8');
+      
+      this.log('info', `File generation completed successfully: ${outputPath}`);
 
     } catch (error) {
+      this.log('error', `Failed to generate file: ${templatePath}`, {
+        error: error as Error,
+        data: { templatePath, dataPath, outputPath }
+      });
       throw new Error(`Failed to generate file: ${error}`);
     }
   }
@@ -105,6 +200,10 @@ export class GentlNode {
    * @param namingRule ファイル命名規則（例: "page-{index}.html", "item-{data.id}.html"）
    */
   async generateFiles(templatePath: string, dataPath: string, outputDir: string, namingRule: string): Promise<string[]> {
+    this.log('info', `Starting multiple files generation`, {
+      data: { templatePath, dataPath, outputDir, namingRule }
+    });
+
     try {
       // パスを検証し、ルートディレクトリ内の絶対パスに変換
       const resolvedTemplatePath = this.validatePath(templatePath, 'Template path');
@@ -113,17 +212,24 @@ export class GentlNode {
 
       // テンプレートファイルを読み込み
       const html = await fs.readFile(resolvedTemplatePath, 'utf-8');
+      this.log('debug', `Template file loaded: ${templatePath}`);
       
       // データディレクトリ内のJSONファイルを読み込み
       const dataFiles = await fs.readdir(resolvedDataPath);
       const jsonFiles = dataFiles.filter(file => path.extname(file).toLowerCase() === '.json');
 
       if (jsonFiles.length === 0) {
+        this.log('error', `No JSON files found in data directory: ${dataPath}`);
         throw new Error('No JSON files found in the specified data directory');
       }
 
+      this.log('info', `Found ${jsonFiles.length} JSON files to process`);
+
       // includeIoの設定
       const includeIo = await this.buildIncludeIo();
+      if (includeIo) {
+        this.log('debug', `Include files loaded: ${Object.keys(includeIo).length} files`);
+      }
 
       // 出力ディレクトリを作成
       await fs.mkdir(resolvedOutputDir, { recursive: true });
@@ -134,6 +240,8 @@ export class GentlNode {
       for (let index = 0; index < jsonFiles.length; index++) {
         const jsonFile = jsonFiles[index];
         const jsonFilePath = path.join(resolvedDataPath, jsonFile);
+        
+        this.log('debug', `Processing file ${index + 1}/${jsonFiles.length}: ${jsonFile}`);
         
         // JSONファイルを読み込み
         const dataContent = await fs.readFile(jsonFilePath, 'utf-8');
@@ -162,11 +270,18 @@ export class GentlNode {
         // 相対パスで返却
         const relativeOutputPath = path.relative(this.rootDir, outputPath);
         generatedFiles.push(relativeOutputPath);
+        
+        this.log('debug', `Generated: ${relativeOutputPath}`);
       }
 
+      this.log('info', `Multiple files generation completed: ${generatedFiles.length} files generated`);
       return generatedFiles;
 
     } catch (error) {
+      this.log('error', `Failed to generate files`, {
+        error: error as Error,
+        data: { templatePath, dataPath, outputDir, namingRule }
+      });
       throw new Error(`Failed to generate files: ${error}`);
     }
   }
@@ -176,16 +291,25 @@ export class GentlNode {
    */
   private async buildIncludeIo(): Promise<IncludeIo | undefined> {
     if (!this.includeDir) {
+      this.log('debug', 'No include directory specified');
       return undefined;
     }
 
     const includeIo: IncludeIo = {};
 
     try {
+      this.log('debug', `Building includeIo from directory: ${this.includeDir}`);
       await this.buildIncludeIoRecursive(this.includeDir, '', includeIo);
+      
+      const fileCount = Object.keys(includeIo).length;
+      this.log('info', `IncludeIo built successfully with ${fileCount} files`);
+      
       return includeIo;
     } catch (error) {
-      console.warn(`Warning: Could not read include directory ${this.includeDir}: ${error}`);
+      this.log('warn', `Could not read include directory`, {
+        error: error as Error,
+        data: { includeDir: this.includeDir }
+      });
       return undefined;
     }
   }
