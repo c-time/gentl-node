@@ -13,9 +13,17 @@
     "clean": "rimraf dist",
     "prepublishOnly": "npm run clean && npm run build"
   },
-  "keywords": [],
+  "keywords": ["template", "gentl", "jsdom", "node", "website"],
   "author": "",
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/c-time/gentl-node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/c-time/gentl-node/issues"
+  },
+  "homepage": "https://github.com/c-time/gentl-node#readme",
   "dependencies": {
     "@c-time/gentl": "^1.0.7",
     "jsdom": "^27.0.1"
