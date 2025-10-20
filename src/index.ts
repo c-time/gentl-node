@@ -1,32 +1,188 @@
 import { JSDOM } from 'jsdom';
-import * as fs from 'fs';
+import * as fs from 'fs/promises';
 import * as path from 'path';
-
-// @c-time/gentlを使用予定
-// TODO: @c-time/gentlのAPIを確認して実装
+import { process as gentlProcess, type GentlJInput, type GentlJOptions } from '@c-time/gentl';
 
 /**
  * Node.js環境でのウェブサイトテンプレートファイル処理ライブラリ
  * jsdomとNodeのファイルシステムを利用
  */
 export class GentlNode {
-  /**
-   * テンプレートファイルを読み込み、処理する
-   * @param templatePath テンプレートファイルのパス
-   */
-  public async loadTemplate(templatePath: string): Promise<void> {
-    // TODO: 実装予定
-    throw new Error('Not implemented yet');
+  private includeDir?: string;
+  private options: Partial<GentlJOptions>;
+
+  constructor(options?: Partial<GentlJOptions>) {
+    this.options = {
+      deleteTemplateTag: true,
+      deleteDataAttributes: true,
+      rootParserType: 'htmlDocument',
+      domEnvironment: JSDOM as any,
+      ...options
+    };
   }
 
   /**
-   * 配列データを流し込んで複数ファイルを生成
-   * @param data 配列データ
-   * @param namingRule ファイル命名規則
+   * includeIoに使用されるフォルダを設定
+   * @param includeDir includeファイルが格納されているディレクトリパス
    */
-  public async generateFiles(data: any[], namingRule: string): Promise<void> {
-    // TODO: 実装予定
-    throw new Error('Not implemented yet');
+  setIncludeDirectory(includeDir: string): void {
+    this.includeDir = includeDir;
+  }
+
+  /**
+   * 単一のHTMLファイルを生成
+   * @param templatePath HTMLテンプレートファイルのパス
+   * @param dataPath JSONデータファイルのパス
+   * @param outputPath 出力ファイルのパス
+   */
+  async generateFile(templatePath: string, dataPath: string, outputPath: string): Promise<void> {
+    try {
+      // テンプレートファイルを読み込み
+      const html = await fs.readFile(templatePath, 'utf-8');
+      
+      // データファイルを読み込み
+      const dataContent = await fs.readFile(dataPath, 'utf-8');
+      const data = JSON.parse(dataContent);
+
+      // includeIoの設定
+      const includeIo = await this.buildIncludeIo();
+
+      // gentlで処理
+      const input: GentlJInput = {
+        html,
+        data,
+        includeIo
+      };
+
+      const result = await gentlProcess(input, this.options);
+
+      // 出力ディレクトリを作成（存在しない場合）
+      const outputDir = path.dirname(outputPath);
+      await fs.mkdir(outputDir, { recursive: true });
+
+      // 結果をファイルに書き込み
+      await fs.writeFile(outputPath, result.html, 'utf-8');
+
+    } catch (error) {
+      throw new Error(`Failed to generate file: ${error}`);
+    }
+  }
+
+  /**
+   * 複数のHTMLファイルを生成
+   * @param templatePath HTMLテンプレートファイルのパス
+   * @param dataPath JSONデータファイルのパス（配列データを想定）
+   * @param outputDir 出力ディレクトリのパス
+   * @param namingRule ファイル命名規則（例: "page-{index}.html", "item-{data.id}.html"）
+   */
+  async generateFiles(templatePath: string, dataPath: string, outputDir: string, namingRule: string): Promise<string[]> {
+    try {
+      // テンプレートファイルを読み込み
+      const html = await fs.readFile(templatePath, 'utf-8');
+      
+      // データファイルを読み込み
+      const dataContent = await fs.readFile(dataPath, 'utf-8');
+      const dataArray = JSON.parse(dataContent);
+
+      if (!Array.isArray(dataArray)) {
+        throw new Error('Data file must contain an array for generateFiles');
+      }
+
+      // includeIoの設定
+      const includeIo = await this.buildIncludeIo();
+
+      // 出力ディレクトリを作成
+      await fs.mkdir(outputDir, { recursive: true });
+
+      const generatedFiles: string[] = [];
+
+      // 各データアイテムに対してファイルを生成
+      for (let index = 0; index < dataArray.length; index++) {
+        const data = dataArray[index];
+
+        // ファイル名を生成（命名規則に従って）
+        const filename = this.applyNamingRule(namingRule, { index, data });
+        const outputPath = path.join(outputDir, filename);
+
+        // gentlで処理
+        const input: GentlJInput = {
+          html,
+          data,
+          includeIo
+        };
+
+        const result = await gentlProcess(input, this.options);
+
+        // 結果をファイルに書き込み
+        await fs.writeFile(outputPath, result.html, 'utf-8');
+        generatedFiles.push(outputPath);
+      }
+
+      return generatedFiles;
+
+    } catch (error) {
+      throw new Error(`Failed to generate files: ${error}`);
+    }
+  }
+
+  /**
+   * includeIoオブジェクトを構築
+   */
+  private async buildIncludeIo(): Promise<Record<string, () => Promise<string>> | undefined> {
+    if (!this.includeDir) {
+      return undefined;
+    }
+
+    const includeIo: Record<string, () => Promise<string>> = {};
+
+    try {
+      const files = await fs.readdir(this.includeDir);
+      
+      for (const file of files) {
+        const filePath = path.join(this.includeDir, file);
+        const stat = await fs.stat(filePath);
+        
+        if (stat.isFile()) {
+          // ファイル名（拡張子なし）をキーとして使用
+          const key = path.parse(file).name;
+          includeIo[key] = async () => {
+            return await fs.readFile(filePath, 'utf-8');
+          };
+        }
+      }
+
+      return includeIo;
+    } catch (error) {
+      console.warn(`Warning: Could not read include directory ${this.includeDir}: ${error}`);
+      return undefined;
+    }
+  }
+
+  /**
+   * 命名規則を適用してファイル名を生成
+   */
+  private applyNamingRule(namingRule: string, context: { index: number; data: any }): string {
+    let filename = namingRule;
+
+    // {index} を置換
+    filename = filename.replace(/\{index\}/g, context.index.toString());
+
+    // {data.property} 形式を置換
+    filename = filename.replace(/\{data\.([^}]+)\}/g, (match, property) => {
+      const value = this.getNestedProperty(context.data, property);
+      return value?.toString() || 'undefined';
+    });
+
+    return filename;
+  }
+
+  /**
+   * ネストされたプロパティの値を取得
+   */
+  private getNestedProperty(obj: any, path: string): any {
+    return path.split('.').reduce((current, key) => {
+      return current && current[key] !== undefined ? current[key] : undefined;
+    }, obj);
   }
 }
 
