@@ -15,6 +15,7 @@ export class GentlNode {
   private rootDir: string;
   private includeDir?: string;
   private options: Partial<GentlJOptions>;
+  private fileContentCache: Record<string, string> = {}; // ファイル内容のキャッシュ
 
   constructor(rootDirectory: string, options?: Partial<GentlJOptions> & { includeDirectory?: string }) {
     if (!rootDirectory) {
@@ -212,8 +213,15 @@ export class GentlNode {
         // 環境依存のパスセパレーターを統一して "/" に正規化
         const key = relativePath ? `${relativePath}/${file}` : file;
         includeIo[key] = async (baseData?: object) => {
-          // baseDataは現在使用していないが、将来的な拡張に備えてパラメーターを受け取る
-          return await fs.readFile(filePath, 'utf-8');
+          // キャッシュにファイル内容があるかチェック
+          if (this.fileContentCache[key] !== undefined) {
+            return this.fileContentCache[key];
+          }
+          
+          // キャッシュにない場合はファイルを読み込んでキャッシュに保存
+          const content = await fs.readFile(filePath, 'utf-8');
+          this.fileContentCache[key] = content;
+          return content;
         };
       }
     }
