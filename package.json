@@ -1,0 +1,32 @@
+{
+  "name": "gentl-node",
+  "version": "1.0.0",
+  "description": "https://www.npmjs.com/package/@c-time/gentl をラップして、 Node.js環境で、jsdomとNodeのファイル・システムを利用してウェブサイトテンプレートファイルを取り扱うためのライブラリ テンプレートはファイル単位で扱われる。 配列のデータを流し込んで、ファイル命名規則に従い、複数のファルを生産する機能も提供する。",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage",
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@c-time/gentl": "^1.0.7",
+    "jsdom": "^27.0.1"
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "@types/jsdom": "^27.0.0",
+    "@types/node": "^24.8.1",
+    "jest": "^30.2.0",
+    "rimraf": "^6.0.1",
+    "ts-jest": "^29.4.5",
+    "typescript": "^5.9.3"
+  }
+}
