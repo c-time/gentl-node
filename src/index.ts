@@ -220,8 +220,19 @@ export class GentlNode {
           
           // キャッシュにない場合はファイルを読み込んでキャッシュに保存
           const content = await fs.readFile(filePath, 'utf-8');
-          this.fileContentCache[key] = content;
-          return content;
+          
+          // includeファイルにもgentl変換処理を適用
+          const processedContent = await gentlProcess({
+            html: content,
+            data: baseData || {},
+            includeIo: includeIo // 再帰的なincludeも可能
+          }, this.options);
+          
+          // 処理済みコンテンツをキャッシュに保存
+          this.fileContentCache[key] = processedContent.html;
+
+          // 読み込んだコンテンツを返す
+          return processedContent.html;
         };
       }
     }
