@@ -20,6 +20,15 @@ describe('GentlNode', () => {
       const customGentlNode = new GentlNode(options);
       expect(customGentlNode).toBeInstanceOf(GentlNode);
     });
+
+    it('should accept includeDirectory in constructor', () => {
+      const options = {
+        includeDirectory: '/path/to/includes',
+        deleteTemplateTag: false
+      };
+      const customGentlNode = new GentlNode(options);
+      expect(customGentlNode).toBeInstanceOf(GentlNode);
+    });
   });
 
   describe('generateFile', () => {
@@ -41,21 +50,6 @@ describe('GentlNode', () => {
     it('should be a function that accepts correct parameters', () => {
       expect(typeof gentlNode.generateFiles).toBe('function');
       expect(gentlNode.generateFiles.length).toBe(4); // templatePath, dataPath, outputDir, namingRule
-    });
-  });
-
-  describe('setIncludeDirectory', () => {
-    it('should be defined', () => {
-      expect(gentlNode.setIncludeDirectory).toBeDefined();
-    });
-
-    it('should set include directory without throwing', () => {
-      expect(() => gentlNode.setIncludeDirectory('/path/to/includes')).not.toThrow();
-    });
-
-    it('should be a function that accepts one parameter', () => {
-      expect(typeof gentlNode.setIncludeDirectory).toBe('function');
-      expect(gentlNode.setIncludeDirectory.length).toBe(1); // includeDir
     });
   });
 });

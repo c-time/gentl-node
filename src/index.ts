@@ -11,22 +11,17 @@ export class GentlNode {
   private includeDir?: string;
   private options: Partial<GentlJOptions>;
 
-  constructor(options?: Partial<GentlJOptions>) {
+  constructor(options?: Partial<GentlJOptions> & { includeDirectory?: string }) {
+    const { includeDirectory, ...gentlOptions } = options || {};
+    
+    this.includeDir = includeDirectory;
     this.options = {
       deleteTemplateTag: true,
       deleteDataAttributes: true,
       rootParserType: 'htmlDocument',
       domEnvironment: JSDOM as any,
-      ...options
+      ...gentlOptions
     };
-  }
-
-  /**
-   * includeIoに使用されるフォルダを設定
-   * @param includeDir includeファイルが格納されているディレクトリパス
-   */
-  setIncludeDirectory(includeDir: string): void {
-    this.includeDir = includeDir;
   }
 
   /**
