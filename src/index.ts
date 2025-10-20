@@ -71,7 +71,7 @@ export class GentlNode {
   /**
    * 複数のHTMLファイルを生成
    * @param templatePath HTMLテンプレートファイルのパス
-   * @param dataPath JSONデータファイルのパス（配列データを想定）
+   * @param dataPath JSONファイルが格納されているディレクトリのパス
    * @param outputDir 出力ディレクトリのパス
    * @param namingRule ファイル命名規則（例: "page-{index}.html", "item-{data.id}.html"）
    */
@@ -80,12 +80,12 @@ export class GentlNode {
       // テンプレートファイルを読み込み
       const html = await fs.readFile(templatePath, 'utf-8');
       
-      // データファイルを読み込み
-      const dataContent = await fs.readFile(dataPath, 'utf-8');
-      const dataArray = JSON.parse(dataContent);
+      // データディレクトリ内のJSONファイルを読み込み
+      const dataFiles = await fs.readdir(dataPath);
+      const jsonFiles = dataFiles.filter(file => path.extname(file).toLowerCase() === '.json');
 
-      if (!Array.isArray(dataArray)) {
-        throw new Error('Data file must contain an array for generateFiles');
+      if (jsonFiles.length === 0) {
+        throw new Error('No JSON files found in the specified data directory');
       }
 
       // includeIoの設定
@@ -96,12 +96,21 @@ export class GentlNode {
 
       const generatedFiles: string[] = [];
 
-      // 各データアイテムに対してファイルを生成
-      for (let index = 0; index < dataArray.length; index++) {
-        const data = dataArray[index];
+      // 各JSONファイルに対してHTMLファイルを生成
+      for (let index = 0; index < jsonFiles.length; index++) {
+        const jsonFile = jsonFiles[index];
+        const jsonFilePath = path.join(dataPath, jsonFile);
+        
+        // JSONファイルを読み込み
+        const dataContent = await fs.readFile(jsonFilePath, 'utf-8');
+        const data = JSON.parse(dataContent);
 
         // ファイル名を生成（命名規則に従って）
-        const filename = this.applyNamingRule(namingRule, { index, data });
+        const filename = this.applyNamingRule(namingRule, { 
+          index, 
+          data,
+          fileName: path.parse(jsonFile).name // JSONファイル名（拡張子なし）も利用可能
+        });
         const outputPath = path.join(outputDir, filename);
 
         // gentlで処理
@@ -161,11 +170,16 @@ export class GentlNode {
   /**
    * 命名規則を適用してファイル名を生成
    */
-  private applyNamingRule(namingRule: string, context: { index: number; data: any }): string {
+  private applyNamingRule(namingRule: string, context: { index: number; data: any; fileName?: string }): string {
     let filename = namingRule;
 
     // {index} を置換
     filename = filename.replace(/\{index\}/g, context.index.toString());
+
+    // {fileName} を置換（JSONファイル名）
+    if (context.fileName) {
+      filename = filename.replace(/\{fileName\}/g, context.fileName);
+    }
 
     // {data.property} 形式を置換
     filename = filename.replace(/\{data\.([^}]+)\}/g, (match, property) => {
