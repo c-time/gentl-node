@@ -213,25 +213,23 @@ export class GentlNode {
         // 環境依存のパスセパレーターを統一して "/" に正規化
         const key = relativePath ? `${relativePath}/${file}` : file;
         includeIo[key] = async (baseData?: object) => {
-          // キャッシュにファイル内容があるかチェック
+          // キャッシュに生ファイル内容があるかチェック
+          let content: string;
           if (this.fileContentCache[key] !== undefined) {
-            return this.fileContentCache[key];
+            content = this.fileContentCache[key];
+          } else {
+            // キャッシュにない場合はファイルを読み込んでキャッシュに保存
+            content = await fs.readFile(filePath, 'utf-8');
+            this.fileContentCache[key] = content;
           }
           
-          // キャッシュにない場合はファイルを読み込んでキャッシュに保存
-          const content = await fs.readFile(filePath, 'utf-8');
-          
-          // includeファイルにもgentl変換処理を適用
+          // 読み込んだコンテンツを返す直前にgentl変換処理を適用
           const processedContent = await gentlProcess({
             html: content,
             data: baseData || {},
             includeIo: includeIo // 再帰的なincludeも可能
           }, this.options);
-          
-          // 処理済みコンテンツをキャッシュに保存
-          this.fileContentCache[key] = processedContent.html;
 
-          // 読み込んだコンテンツを返す
           return processedContent.html;
         };
       }
