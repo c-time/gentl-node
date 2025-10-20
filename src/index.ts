@@ -181,26 +181,41 @@ export class GentlNode {
     const includeIo: IncludeIo = {};
 
     try {
-      const files = await fs.readdir(this.includeDir);
-      
-      for (const file of files) {
-        const filePath = path.join(this.includeDir, file);
-        const stat = await fs.stat(filePath);
-        
-        if (stat.isFile()) {
-          // ファイル名（拡張子あり）をキーとして使用
-          const key = file;
-          includeIo[key] = async (baseData?: object) => {
-            // baseDataは現在使用していないが、将来的な拡張に備えてパラメーターを受け取る
-            return await fs.readFile(filePath, 'utf-8');
-          };
-        }
-      }
-
+      await this.buildIncludeIoRecursive(this.includeDir, '', includeIo);
       return includeIo;
     } catch (error) {
       console.warn(`Warning: Could not read include directory ${this.includeDir}: ${error}`);
       return undefined;
+    }
+  }
+
+  /**
+   * includeIoオブジェクトを再帰的に構築
+   */
+  private async buildIncludeIoRecursive(
+    currentDir: string, 
+    relativePath: string, 
+    includeIo: IncludeIo
+  ): Promise<void> {
+    const files = await fs.readdir(currentDir);
+    
+    for (const file of files) {
+      const filePath = path.join(currentDir, file);
+      const stat = await fs.stat(filePath);
+      
+      if (stat.isDirectory()) {
+        // 子ディレクトリを再帰的に処理
+        const newRelativePath = relativePath ? `${relativePath}/${file}` : file;
+        await this.buildIncludeIoRecursive(filePath, newRelativePath, includeIo);
+      } else if (stat.isFile()) {
+        // ファイル名（相対パス + 拡張子あり）をキーとして使用
+        // 環境依存のパスセパレーターを統一して "/" に正規化
+        const key = relativePath ? `${relativePath}/${file}` : file;
+        includeIo[key] = async (baseData?: object) => {
+          // baseDataは現在使用していないが、将来的な拡張に備えてパラメーターを受け取る
+          return await fs.readFile(filePath, 'utf-8');
+        };
+      }
     }
   }
 
