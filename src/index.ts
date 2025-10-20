@@ -3,6 +3,10 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { process as gentlProcess, type GentlJInput, type GentlJOptions } from '@c-time/gentl';
 
+// 新しいIncludeIo型定義に対応
+type IncludeIoFunction = (baseData?: object) => Promise<string>;
+type IncludeIo = Record<string, IncludeIoFunction>;
+
 /**
  * Node.js環境でのウェブサイトテンプレートファイル処理ライブラリ
  * jsdomとNodeのファイルシステムを利用
@@ -169,12 +173,12 @@ export class GentlNode {
   /**
    * includeIoオブジェクトを構築
    */
-  private async buildIncludeIo(): Promise<Record<string, () => Promise<string>> | undefined> {
+  private async buildIncludeIo(): Promise<IncludeIo | undefined> {
     if (!this.includeDir) {
       return undefined;
     }
 
-    const includeIo: Record<string, () => Promise<string>> = {};
+    const includeIo: IncludeIo = {};
 
     try {
       const files = await fs.readdir(this.includeDir);
@@ -186,7 +190,8 @@ export class GentlNode {
         if (stat.isFile()) {
           // ファイル名（拡張子なし）をキーとして使用
           const key = path.parse(file).name;
-          includeIo[key] = async () => {
+          includeIo[key] = async (baseData?: object) => {
+            // baseDataは現在使用していないが、将来的な拡張に備えてパラメーターを受け取る
             return await fs.readFile(filePath, 'utf-8');
           };
         }
