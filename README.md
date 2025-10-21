@@ -341,6 +341,34 @@ try {
 
 バグレポートや機能リクエストは、GitHubのIssuesページでお受けしています。
 
+## 開発・貢献
+
+### 開発環境のセットアップ
+
+```bash
+git clone https://github.com/c-time/gentl-node.git
+cd gentl-node
+npm install
+```
+
+### スクリプト
+
+```bash
+npm run build       # TypeScriptビルド
+npm run dev         # 開発モード（ファイル監視）
+npm test            # テスト実行
+npm run test:watch  # テスト監視モード
+npm run test:coverage # カバレッジ付きテスト
+npm run clean       # ビルドファイル削除
+```
+
+### 公開
+
+```bash
+npm run prepublishOnly  # ビルド＋テスト
+npm publish            # npm公開
+```
+
 ## 関連リンク
 
 - [@c-time/gentl](https://www.npmjs.com/package/@c-time/gentl) - 基盤となるテンプレートエンジン
