@@ -4,6 +4,14 @@
   "description": "Node.js環境でのウェブサイトテンプレートファイル処理ライブラリ。@c-time/gentlをラップし、jsdomとNodeのファイルシステムを利用してHTMLテンプレートの生成を行います。",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=16.0.0"
+  },
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",
@@ -11,11 +19,23 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "clean": "rimraf dist",
-    "prepublishOnly": "npm run clean && npm run build"
+    "lint": "echo 'No linter configured'",
+    "prepublishOnly": "npm run clean && npm run build && npm test"
   },
-  "keywords": ["template", "gentl", "jsdom", "node", "website"],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "template",
+    "html",
+    "generator", 
+    "gentl",
+    "jsdom",
+    "node",
+    "website",
+    "static-site",
+    "build-tool",
+    "template-engine"
+  ],
+  "author": "c-time",
+  "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/c-time/gentl-node.git"
