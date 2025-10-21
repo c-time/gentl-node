@@ -58,12 +58,12 @@ console.log('Generated files:', generatedFiles);
 ### GentlNode コンストラクタ
 
 ```typescript
-new GentlNode(rootDirectory: string, options?: GentlNodeOptions)
+new GentlNode(outputRootDirectory: string, options?: GentlNodeOptions)
 ```
 
 #### パラメータ
 
-- **rootDirectory** `string` - 出力ファイル専用のルートディレクトリ（必須）
+- **outputRootDirectory** `string` - 出力ファイル専用のルートディレクトリ（必須）
 - **options** `GentlNodeOptions` - 設定オプション（省略可能）
 
 #### GentlNodeOptions

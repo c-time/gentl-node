@@ -15,7 +15,7 @@ describe('GentlNode', () => {
     });
 
     it('should throw error if output root directory is not provided', () => {
-      expect(() => new GentlNode('')).toThrow('Root directory is required');
+      expect(() => new GentlNode('')).toThrow('Output root directory is required');
     });
 
     it('should accept options in constructor', () => {

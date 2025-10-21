@@ -39,17 +39,17 @@ export class GentlNode {
   private includeNotFoundHandler?: IncludeNotFoundHandler; // includeファイルが見つからない場合のハンドラー
   private baseData: object = {}; // ベースデータのキャッシュ
 
-  constructor(rootDirectory: string, options?: Partial<GentlJOptions> & { 
+  constructor(outputRootDirectory: string, options?: Partial<GentlJOptions> & { 
     includeDirectory?: string; 
     logger?: Logger;
     includeNotFoundHandler?: IncludeNotFoundHandler;
   }) {
-    if (!rootDirectory) {
-      throw new Error('Root directory is required');
+    if (!outputRootDirectory) {
+      throw new Error('Output root directory is required');
     }
     
-    // rootDirectoryは出力ファイル専用のルートディレクトリとして扱う
-    this.rootDir = path.resolve(rootDirectory);
+    // outputRootDirectoryは出力ファイル専用のルートディレクトリとして扱う
+    this.rootDir = path.resolve(outputRootDirectory);
     
     const { includeDirectory, logger, includeNotFoundHandler, ...gentlOptions } = options || {};
     
