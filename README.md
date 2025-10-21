@@ -22,9 +22,9 @@ npm install gentl-node
 ### 単一ファイルの生成
 
 ```typescript
-import { GentlNode } from 'gentl-node';
+import { GentlNode, type IGentlNode } from 'gentl-node';
 
-const gentlNode = new GentlNode('./output-root', {
+const gentlNode: IGentlNode = new GentlNode('./output-root', {
   includeDirectory: './includes',  // 絶対パスまたはカレントディレクトリからの相対パス
   deleteTemplateTag: true,
   deleteDataAttributes: true
@@ -55,10 +55,24 @@ console.log('Generated files:', generatedFiles);
 
 ## API リファレンス
 
+### IGentlNode インターフェース
+
+```typescript
+interface IGentlNode {
+  setBaseData(baseDataPath: string): Promise<void>;
+  getBaseData(): object;
+  clearBaseData(): void;
+  generateFile(templatePath: string, dataPath: string, outputPath: string): Promise<void>;
+  generateFiles(templatePath: string, dataPath: string, outputDir: string, namingRule: string): Promise<string[]>;
+}
+```
+
 ### GentlNode コンストラクタ
 
 ```typescript
-new GentlNode(outputRootDirectory: string, options?: GentlNodeOptions)
+class GentlNode implements IGentlNode {
+  constructor(outputRootDirectory: string, options?: GentlNodeOptions)
+}
 ```
 
 #### パラメータ
@@ -146,9 +160,9 @@ const gentlNode = new GentlNode('./project', {
 全てのファイル生成で共通して使用されるベースデータを設定できます。
 
 ```typescript
-import { GentlNode } from 'gentl-node';
+import { GentlNode, type IGentlNode } from 'gentl-node';
 
-const gentlNode = new GentlNode('./project');
+const gentlNode: IGentlNode = new GentlNode('./project');
 
 // ベースデータを設定
 await gentlNode.setBaseData('data/base.json');

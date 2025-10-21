@@ -9,6 +9,42 @@ type IncludeIo = (key: string, baseData?: object) => Promise<string>;
 // includeファイルが見つからない場合のハンドラー関数の型定義
 export type IncludeNotFoundHandler = (key: string, baseData?: object) => Promise<string>;
 
+// GentlNodeクラスのパブリックAPIインターフェース
+export interface IGentlNode {
+  /**
+   * ベースデータを設定
+   * @param baseDataPath ベースデータのJSONファイルのパス（絶対パスまたは現在の作業ディレクトリからの相対パス）
+   */
+  setBaseData(baseDataPath: string): Promise<void>;
+
+  /**
+   * 現在のベースデータを取得
+   */
+  getBaseData(): object;
+
+  /**
+   * ベースデータをクリア（空のオブジェクトに戻す）
+   */
+  clearBaseData(): void;
+
+  /**
+   * 単一のHTMLファイルを生成
+   * @param templatePath HTMLテンプレートファイルのパス（絶対パスまたは現在の作業ディレクトリからの相対パス）
+   * @param dataPath JSONデータファイルのパス（絶対パスまたは現在の作業ディレクトリからの相対パス）
+   * @param outputPath 出力ファイルのパス（出力ルートディレクトリからの相対パス）
+   */
+  generateFile(templatePath: string, dataPath: string, outputPath: string): Promise<void>;
+
+  /**
+   * 複数のHTMLファイルを生成
+   * @param templatePath HTMLテンプレートファイルのパス（絶対パスまたは現在の作業ディレクトリからの相対パス）
+   * @param dataPath JSONファイルが格納されているディレクトリのパス（絶対パスまたは現在の作業ディレクトリからの相対パス）
+   * @param outputDir 出力ディレクトリのパス（出力ルートディレクトリからの相対パス）
+   * @param namingRule ファイル命名規則（例: "page-{index}.html", "item-{data.id}.html"）
+   */
+  generateFiles(templatePath: string, dataPath: string, outputDir: string, namingRule: string): Promise<string[]>;
+}
+
 // Logger型定義（gentlパッケージから）
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 export interface LogEntry {
@@ -30,7 +66,7 @@ export type Logger = (entry: LogEntry) => void;
  * jsdomとNodeのファイルシステムを利用
  * rootDirectoryは出力ファイル専用のルートディレクトリとして機能
  */
-export class GentlNode {
+export class GentlNode implements IGentlNode {
   private rootDir: string; // 出力ファイル専用のルートディレクトリ
   private includeDir?: string;
   private options: Partial<GentlJOptions>;
