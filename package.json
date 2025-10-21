@@ -1,6 +1,6 @@
 {
   "name": "gentl-node",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Node.js環境でのウェブサイトテンプレートファイル処理ライブラリ。@c-time/gentlをラップし、jsdomとNodeのファイルシステムを利用してHTMLテンプレートの生成を行います。",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
