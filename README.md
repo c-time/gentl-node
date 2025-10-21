@@ -223,16 +223,16 @@ project/
     <title>My Page</title>
 </head>
 <body>
-    <template data-gen-scope="" data-gen-include="header"></template>
+    <template data-gen-scope="" data-gen-include="header.html"></template>
     
     <main>
         <template data-gen-scope="">
             <h1 data-gen-text="title">Page Title</h1>
         </template>
-        <template data-gen-scope="" data-gen-include="components/button"></template>
+        <template data-gen-scope="" data-gen-include="components/button.html"></template>
     </main>
     
-    <template data-gen-scope="" data-gen-include="footer"></template>
+    <template data-gen-scope="" data-gen-include="footer.html"></template>
 </body>
 </html>
 ```
