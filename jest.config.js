@@ -8,6 +8,9 @@ module.exports = {
       isolatedModules: true
     }]
   },
+  moduleNameMapper: {
+    '^jsdom$': '<rootDir>/src/__tests__/__mocks__/jsdom.js'
+  },
   collectCoverageFrom: [
     'src/**/*.ts',
     '!src/**/*.d.ts',

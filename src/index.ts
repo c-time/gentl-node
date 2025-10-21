@@ -6,6 +6,9 @@ import { process as gentlProcess, type GentlJInput, type GentlJOptions } from '@
 // 新しいIncludeIo型定義に対応（v1.2.0）
 type IncludeIo = (key: string, baseData?: object) => Promise<string>;
 
+// フォールバック関数の型定義
+type FallbackFunction = (key: string, baseData?: object) => Promise<string>;
+
 // Logger型定義（gentlパッケージから）
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 interface LogEntry {
@@ -32,18 +35,26 @@ export class GentlNode {
   private options: Partial<GentlJOptions>;
   private fileContentCache: Record<string, string> = {}; // ファイル内容のキャッシュ
   private logger: Logger;
+  private fallbackFunction?: FallbackFunction; // 未定義キー用のフォールバック関数
 
-  constructor(rootDirectory: string, options?: Partial<GentlJOptions> & { includeDirectory?: string; logger?: Logger }) {
+  constructor(rootDirectory: string, options?: Partial<GentlJOptions> & { 
+    includeDirectory?: string; 
+    logger?: Logger;
+    fallbackFunction?: FallbackFunction;
+  }) {
     if (!rootDirectory) {
       throw new Error('Root directory is required');
     }
     
     this.rootDir = path.resolve(rootDirectory);
     
-    const { includeDirectory, logger, ...gentlOptions } = options || {};
+    const { includeDirectory, logger, fallbackFunction, ...gentlOptions } = options || {};
     
     // includeDirectoryが指定されている場合、ルートディレクトリからの相対パスとして処理
     this.includeDir = includeDirectory ? path.resolve(this.rootDir, includeDirectory) : undefined;
+    
+    // フォールバック関数を設定
+    this.fallbackFunction = fallbackFunction;
     
     // ログ機能の設定（デフォルトロガーまたはカスタムロガー）
     this.logger = logger || this.createDefaultLogger();
@@ -309,7 +320,17 @@ export class GentlNode {
         const filePath = includeFileMap.get(key);
         if (!filePath) {
           this.log('warn', `Include file not found: ${key}`);
-          return '';
+          
+          // フォールバック関数が設定されている場合はそれを使用
+          if (this.fallbackFunction) {
+            this.log('info', `Using fallback function for key: ${key}`);
+            return await this.fallbackFunction(key, baseData);
+          }
+          
+          // フォールバック関数が設定されていない場合はエラー
+          const errorMessage = `Include file not found and no fallback function provided: ${key}`;
+          this.log('error', errorMessage, { data: { key } });
+          throw new Error(errorMessage);
         }
 
         // キャッシュに生ファイル内容があるかチェック
