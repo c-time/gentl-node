@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2025-10-21
+
+### Changed
+- Set default values to preserve template structure and data attributes
+  - `deleteTemplateTag: false` (preserve `<template>` tags for reusability)
+  - `deleteDataAttributes: false` (preserve `data-gen-*` attributes for debugging)
+- Simplified README usage examples by removing optional configuration parameters
+- Aligned default behavior with @c-time/gentl's philosophy of template reusability
+
+### Documentation
+- Streamlined basic usage examples for better clarity
+- Removed optional configuration from simple examples to focus on core functionality
+
 ## [1.0.1] - 2025-10-21
 
 ### Fixed
