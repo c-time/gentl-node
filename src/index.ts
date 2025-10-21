@@ -3,9 +3,8 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { process as gentlProcess, type GentlJInput, type GentlJOptions } from '@c-time/gentl';
 
-// 新しいIncludeIo型定義に対応
-type IncludeIoFunction = (baseData?: object) => Promise<string>;
-type IncludeIo = Record<string, IncludeIoFunction>;
+// 新しいIncludeIo型定義に対応（v1.2.0）
+type IncludeIo = (key: string, baseData?: object) => Promise<string>;
 
 // Logger型定義（gentlパッケージから）
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -161,7 +160,7 @@ export class GentlNode {
       // includeIoの設定
       const includeIo = await this.buildIncludeIo();
       if (includeIo) {
-        this.log('debug', `Include files loaded: ${Object.keys(includeIo).length} files`);
+        this.log('debug', `Include function created successfully`);
       }
 
       // gentlで処理
@@ -228,7 +227,7 @@ export class GentlNode {
       // includeIoの設定
       const includeIo = await this.buildIncludeIo();
       if (includeIo) {
-        this.log('debug', `Include files loaded: ${Object.keys(includeIo).length} files`);
+        this.log('debug', `Include function created successfully`);
       }
 
       // 出力ディレクトリを作成
@@ -287,7 +286,7 @@ export class GentlNode {
   }
 
   /**
-   * includeIoオブジェクトを構築
+   * includeIoファンクションを構築
    */
   private async buildIncludeIo(): Promise<IncludeIo | undefined> {
     if (!this.includeDir) {
@@ -295,14 +294,43 @@ export class GentlNode {
       return undefined;
     }
 
-    const includeIo: IncludeIo = {};
+    // ファイル情報を格納するマップを作成
+    const includeFileMap = new Map<string, string>();
 
     try {
       this.log('debug', `Building includeIo from directory: ${this.includeDir}`);
-      await this.buildIncludeIoRecursive(this.includeDir, '', includeIo);
+      await this.buildIncludeFileMap(this.includeDir, '', includeFileMap);
       
-      const fileCount = Object.keys(includeIo).length;
+      const fileCount = includeFileMap.size;
       this.log('info', `IncludeIo built successfully with ${fileCount} files`);
+      
+      // 新しいAPI形式のIncludeIo関数を返す
+      const includeIo: IncludeIo = async (key: string, baseData?: object) => {
+        const filePath = includeFileMap.get(key);
+        if (!filePath) {
+          this.log('warn', `Include file not found: ${key}`);
+          return '';
+        }
+
+        // キャッシュに生ファイル内容があるかチェック
+        let content: string;
+        if (this.fileContentCache[key] !== undefined) {
+          content = this.fileContentCache[key];
+        } else {
+          // キャッシュにない場合はファイルを読み込んでキャッシュに保存
+          content = await fs.readFile(filePath, 'utf-8');
+          this.fileContentCache[key] = content;
+        }
+        
+        // 読み込んだコンテンツを返す直前にgentl変換処理を適用
+        const processedContent = await gentlProcess({
+          html: content,
+          data: baseData || {},
+          includeIo: includeIo // 再帰的なincludeも可能
+        }, this.options);
+
+        return processedContent.html;
+      };
       
       return includeIo;
     } catch (error) {
@@ -315,12 +343,12 @@ export class GentlNode {
   }
 
   /**
-   * includeIoオブジェクトを再帰的に構築
+   * includeファイルマップを再帰的に構築
    */
-  private async buildIncludeIoRecursive(
+  private async buildIncludeFileMap(
     currentDir: string, 
     relativePath: string, 
-    includeIo: IncludeIo
+    includeFileMap: Map<string, string>
   ): Promise<void> {
     const files = await fs.readdir(currentDir);
     
@@ -331,31 +359,12 @@ export class GentlNode {
       if (stat.isDirectory()) {
         // 子ディレクトリを再帰的に処理
         const newRelativePath = relativePath ? `${relativePath}/${file}` : file;
-        await this.buildIncludeIoRecursive(filePath, newRelativePath, includeIo);
+        await this.buildIncludeFileMap(filePath, newRelativePath, includeFileMap);
       } else if (stat.isFile()) {
         // ファイル名（相対パス + 拡張子あり）をキーとして使用
         // 環境依存のパスセパレーターを統一して "/" に正規化
         const key = relativePath ? `${relativePath}/${file}` : file;
-        includeIo[key] = async (baseData?: object) => {
-          // キャッシュに生ファイル内容があるかチェック
-          let content: string;
-          if (this.fileContentCache[key] !== undefined) {
-            content = this.fileContentCache[key];
-          } else {
-            // キャッシュにない場合はファイルを読み込んでキャッシュに保存
-            content = await fs.readFile(filePath, 'utf-8');
-            this.fileContentCache[key] = content;
-          }
-          
-          // 読み込んだコンテンツを返す直前にgentl変換処理を適用
-          const processedContent = await gentlProcess({
-            html: content,
-            data: baseData || {},
-            includeIo: includeIo // 再帰的なincludeも可能
-          }, this.options);
-
-          return processedContent.html;
-        };
+        includeFileMap.set(key, filePath);
       }
     }
   }
