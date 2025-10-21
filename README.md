@@ -60,8 +60,6 @@ console.log('Generated files:', generatedFiles);
 ```typescript
 interface IGentlNode {
   setBaseData(baseDataPath: string): Promise<void>;
-  getBaseData(): object;
-  clearBaseData(): void;
   generateFile(templatePath: string, dataPath: string, outputPath: string): Promise<void>;
   generateFiles(templatePath: string, dataPath: string, outputDir: string, namingRule: string): Promise<string[]>;
 }
@@ -127,12 +125,6 @@ generateFiles(
 ```typescript
 // ベースデータを設定（全てのファイル生成でマージされる）
 setBaseData(baseDataPath: string): Promise<void>  // 絶対パスまたは現在の作業ディレクトリからの相対パス
-
-// 現在のベースデータを取得
-getBaseData(): object
-
-// ベースデータをクリア
-clearBaseData(): void
 ```
 
 ## 高度な使用方法
@@ -169,13 +161,6 @@ await gentlNode.setBaseData('data/base.json');
 
 // 以降のgenerateFile/generateFilesでベースデータが自動的にマージされる
 await gentlNode.generateFile('templates/page.html', 'data/page.json', 'output/page.html');
-
-// ベースデータを確認
-const currentBase = gentlNode.getBaseData();
-console.log('Current base data:', currentBase);
-
-// ベースデータをクリア
-gentlNode.clearBaseData();
 ```
 
 **データマージの仕組み:**

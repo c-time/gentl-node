@@ -115,26 +115,5 @@ describe('GentlNode', () => {
       expect(gentlNode.setBaseData).toBeDefined();
       expect(typeof gentlNode.setBaseData).toBe('function');
     });
-
-    it('should have getBaseData method', () => {
-      expect(gentlNode.getBaseData).toBeDefined();
-      expect(typeof gentlNode.getBaseData).toBe('function');
-    });
-
-    it('should have clearBaseData method', () => {
-      expect(gentlNode.clearBaseData).toBeDefined();
-      expect(typeof gentlNode.clearBaseData).toBe('function');
-    });
-
-    it('should return empty object as initial base data', () => {
-      const baseData = gentlNode.getBaseData();
-      expect(baseData).toEqual({});
-    });
-
-    it('should clear base data', () => {
-      gentlNode.clearBaseData();
-      const baseData = gentlNode.getBaseData();
-      expect(baseData).toEqual({});
-    });
   });
 });

@@ -18,16 +18,6 @@ export interface IGentlNode {
   setBaseData(baseDataPath: string): Promise<void>;
 
   /**
-   * 現在のベースデータを取得
-   */
-  getBaseData(): object;
-
-  /**
-   * ベースデータをクリア（空のオブジェクトに戻す）
-   */
-  clearBaseData(): void;
-
-  /**
    * 単一のHTMLファイルを生成
    * @param templatePath HTMLテンプレートファイルのパス（絶対パスまたは現在の作業ディレクトリからの相対パス）
    * @param dataPath JSONデータファイルのパス（絶対パスまたは現在の作業ディレクトリからの相対パス）
@@ -187,21 +177,6 @@ export class GentlNode implements IGentlNode {
       });
       throw new Error(`Failed to load base data: ${error}`);
     }
-  }
-
-  /**
-   * 現在のベースデータを取得
-   */
-  getBaseData(): object {
-    return { ...this.baseData };
-  }
-
-  /**
-   * ベースデータをクリア（空のオブジェクトに戻す）
-   */
-  clearBaseData(): void {
-    this.baseData = {};
-    this.log('info', 'Base data cleared');
   }
 
   /**
