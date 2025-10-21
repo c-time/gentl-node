@@ -36,6 +36,7 @@ export class GentlNode {
   private fileContentCache: Record<string, string> = {}; // ファイル内容のキャッシュ
   private logger: Logger;
   private includeNotFoundHandler?: IncludeNotFoundHandler; // includeファイルが見つからない場合のハンドラー
+  private baseData: object = {}; // ベースデータのキャッシュ
 
   constructor(rootDirectory: string, options?: Partial<GentlJOptions> & { 
     includeDirectory?: string; 
@@ -124,6 +125,55 @@ export class GentlNode {
   }
 
   /**
+   * ベースデータを設定
+   * @param baseDataPath ベースデータのJSONファイルのパス（ルートディレクトリからの相対パス）
+   */
+  async setBaseData(baseDataPath: string): Promise<void> {
+    this.log('info', `Setting base data from file: ${baseDataPath}`);
+
+    try {
+      // パスを検証し、ルートディレクトリ内の絶対パスに変換
+      const resolvedBaseDataPath = this.validatePath(baseDataPath, 'Base data path');
+
+      // ベースデータファイルを読み込み
+      const baseDataContent = await fs.readFile(resolvedBaseDataPath, 'utf-8');
+      this.baseData = JSON.parse(baseDataContent);
+
+      this.log('info', `Base data loaded and cached successfully from: ${baseDataPath}`);
+      this.log('debug', `Base data content`, { data: this.baseData });
+
+    } catch (error) {
+      this.log('error', `Failed to load base data: ${baseDataPath}`, {
+        error: error as Error,
+        data: { baseDataPath }
+      });
+      throw new Error(`Failed to load base data: ${error}`);
+    }
+  }
+
+  /**
+   * 現在のベースデータを取得
+   */
+  getBaseData(): object {
+    return { ...this.baseData };
+  }
+
+  /**
+   * ベースデータをクリア（空のオブジェクトに戻す）
+   */
+  clearBaseData(): void {
+    this.baseData = {};
+    this.log('info', 'Base data cleared');
+  }
+
+  /**
+   * データをマージ（ベースデータを優先）
+   */
+  private mergeData(fileData: object, baseData: object): object {
+    return { ...fileData, ...baseData };
+  }
+
+  /**
    * パスがルートディレクトリ内にあるかを検証
    */
   private validatePath(filePath: string, description: string): string {
@@ -165,8 +215,14 @@ export class GentlNode {
       
       // データファイルを読み込み
       const dataContent = await fs.readFile(resolvedDataPath, 'utf-8');
-      const data = JSON.parse(dataContent);
+      const fileData = JSON.parse(dataContent);
       this.log('debug', `Data file loaded and parsed: ${dataPath}`);
+
+      // ベースデータとファイルデータをマージ
+      const data = this.mergeData(fileData, this.baseData);
+      this.log('debug', `Data merged with base data`, {
+        data: { fileDataKeys: Object.keys(fileData), baseDataKeys: Object.keys(this.baseData) }
+      });
 
       // includeIoの設定
       const includeIo = await this.buildIncludeIo();
@@ -255,7 +311,13 @@ export class GentlNode {
         
         // JSONファイルを読み込み
         const dataContent = await fs.readFile(jsonFilePath, 'utf-8');
-        const data = JSON.parse(dataContent);
+        const fileData = JSON.parse(dataContent);
+
+        // ベースデータとファイルデータをマージ
+        const data = this.mergeData(fileData, this.baseData);
+        this.log('debug', `Data merged with base data for file: ${jsonFile}`, {
+          data: { fileDataKeys: Object.keys(fileData), baseDataKeys: Object.keys(this.baseData) }
+        });
 
         // ファイル名を生成（命名規則に従って）
         const filename = this.applyNamingRule(namingRule, { 

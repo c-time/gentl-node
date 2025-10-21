@@ -108,6 +108,19 @@ generateFiles(
 - `{fileName}` - JSONファイル名（拡張子なし）
 - `{data.property}` - JSONデータのプロパティ値（ネスト対応）
 
+#### ベースデータ管理
+
+```typescript
+// ベースデータを設定（全てのファイル生成でマージされる）
+setBaseData(baseDataPath: string): Promise<void>
+
+// 現在のベースデータを取得
+getBaseData(): object
+
+// ベースデータをクリア
+clearBaseData(): void
+```
+
 ## 高度な使用方法
 
 ### カスタムロガーの使用
@@ -127,6 +140,34 @@ const gentlNode = new GentlNode('./project', {
   logger: customLogger
 });
 ```
+
+### ベースデータの使用
+
+全てのファイル生成で共通して使用されるベースデータを設定できます。
+
+```typescript
+import { GentlNode } from 'gentl-node';
+
+const gentlNode = new GentlNode('./project');
+
+// ベースデータを設定
+await gentlNode.setBaseData('data/base.json');
+
+// 以降のgenerateFile/generateFilesでベースデータが自動的にマージされる
+await gentlNode.generateFile('templates/page.html', 'data/page.json', 'output/page.html');
+
+// ベースデータを確認
+const currentBase = gentlNode.getBaseData();
+console.log('Current base data:', currentBase);
+
+// ベースデータをクリア
+gentlNode.clearBaseData();
+```
+
+**データマージの仕組み:**
+- ファイルデータとベースデータがマージされます
+- 同じプロパティがある場合、**ベースデータが優先**されます
+- マージ例: `{...fileData, ...baseData}`
 
 ### includeNotFoundHandlerの設定
 
@@ -201,6 +242,7 @@ my-website/
 │       ├── card.html
 │       └── button.html
 ├── data/
+│   ├── base.json          # ベースデータ（全ファイル共通）
 │   ├── index.json
 │   └── products/
 │       ├── product-1.json
@@ -212,6 +254,44 @@ my-website/
         ├── product-1.html
         ├── product-2.html
         └── product-3.html
+```
+
+**data/base.json の例:**
+```json
+{
+  "siteName": "My Website",
+  "version": "1.0.0",
+  "author": "John Doe",
+  "meta": {
+    "description": "Welcome to my website",
+    "keywords": ["web", "site", "example"]
+  }
+}
+```
+
+**data/products/product-1.json の例:**
+```json
+{
+  "title": "Product 1",
+  "price": "$29.99",
+  "description": "Amazing product description"
+}
+```
+
+**マージ後のデータ（product-1.html生成時）:**
+```json
+{
+  "title": "Product 1",
+  "price": "$29.99", 
+  "description": "Amazing product description",
+  "siteName": "My Website",
+  "version": "1.0.0",
+  "author": "John Doe",
+  "meta": {
+    "description": "Welcome to my website",
+    "keywords": ["web", "site", "example"]
+  }
+}
 ```
 
 ## ログレベル
