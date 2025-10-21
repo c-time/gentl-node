@@ -1,6 +1,6 @@
 # gentl-node
 
-Node.js環境でのウェブサイトテンプレートファイル処理ライブラリです。[@c-time/gentl](https://www.npmjs.com/package/@c-time/gentl)をラップし、jsdomとNodeのファイルシステムを利用してHTMLテンプレートの生成を行います。
+Node.js環境でのウェブサイトテンプレートファイル処理ライブラリです。[@c-time/gentl](https://www.npmjs.com/package/@c-time/gentl)をラップし、jsdomとNodeのファイルシステムを利用してHTMLの生成を行います。
 
 ## 特徴
 
