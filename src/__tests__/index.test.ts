@@ -46,10 +46,10 @@ describe('GentlNode', () => {
       expect(customGentlNode).toBeInstanceOf(GentlNode);
     });
 
-    it('should accept fallbackFunction in constructor', () => {
-      const mockFallbackFunction = jest.fn().mockResolvedValue('<p>fallback content</p>');
+    it('should accept includeNotFoundHandler in constructor', () => {
+      const mockIncludeNotFoundHandler = jest.fn().mockResolvedValue('<p>fallback content</p>');
       const options = {
-        fallbackFunction: mockFallbackFunction,
+        includeNotFoundHandler: mockIncludeNotFoundHandler,
         deleteTemplateTag: false
       };
       const customGentlNode = new GentlNode(testRootDir, options);
@@ -90,22 +90,22 @@ describe('GentlNode', () => {
     });
   });
 
-  describe('fallback functionality', () => {
-    it('should use fallback function when include file is not found', () => {
-      const mockFallbackFunction = jest.fn().mockResolvedValue('<p>fallback content</p>');
-      const gentlNodeWithFallback = new GentlNode(testRootDir, {
-        fallbackFunction: mockFallbackFunction,
+  describe('include not found handler functionality', () => {
+    it('should use include not found handler when include file is not found', () => {
+      const mockIncludeNotFoundHandler = jest.fn().mockResolvedValue('<p>fallback content</p>');
+      const gentlNodeWithHandler = new GentlNode(testRootDir, {
+        includeNotFoundHandler: mockIncludeNotFoundHandler,
         includeDirectory: 'includes'
       });
-      expect(gentlNodeWithFallback).toBeInstanceOf(GentlNode);
+      expect(gentlNodeWithHandler).toBeInstanceOf(GentlNode);
       // 実際のテストは統合テストで行う（ファイルシステムが必要）
     });
 
-    it('should throw error when include file is not found and no fallback provided', () => {
-      const gentlNodeNoFallback = new GentlNode(testRootDir, {
+    it('should throw error when include file is not found and no handler provided', () => {
+      const gentlNodeNoHandler = new GentlNode(testRootDir, {
         includeDirectory: 'includes'
       });
-      expect(gentlNodeNoFallback).toBeInstanceOf(GentlNode);
+      expect(gentlNodeNoHandler).toBeInstanceOf(GentlNode);
       // 実際のエラーテストは統合テストで行う（ファイルシステムが必要）
     });
   });
