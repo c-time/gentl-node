@@ -39,9 +39,7 @@ npm install gentl-node
 import { GentlNode, type IGentlNode } from 'gentl-node';
 
 const gentlNode: IGentlNode = new GentlNode('./output-root', {
-  includeDirectory: './includes',  // 絶対パスまたはカレントディレクトリからの相対パス
-  deleteTemplateTag: true,
-  deleteDataAttributes: true
+  includeDirectory: './includes'  // 絶対パスまたはカレントディレクトリからの相対パス
 });
 
 // 単一HTMLファイルを生成

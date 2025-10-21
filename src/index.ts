@@ -89,8 +89,8 @@ export class GentlNode implements IGentlNode {
     this.logger = logger || this.createDefaultLogger();
     
     this.options = {
-      deleteTemplateTag: true,
-      deleteDataAttributes: true,
+      deleteTemplateTag: false,
+      deleteDataAttributes: false,
       rootParserType: 'htmlDocument',
       domEnvironment: JSDOM as any,
       logger: this.logger, // gentlにもloggerを渡す
