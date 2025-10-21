@@ -7,11 +7,11 @@ import { process as gentlProcess, type GentlJInput, type GentlJOptions } from '@
 type IncludeIo = (key: string, baseData?: object) => Promise<string>;
 
 // includeファイルが見つからない場合のハンドラー関数の型定義
-type IncludeNotFoundHandler = (key: string, baseData?: object) => Promise<string>;
+export type IncludeNotFoundHandler = (key: string, baseData?: object) => Promise<string>;
 
 // Logger型定義（gentlパッケージから）
-type LogLevel = 'debug' | 'info' | 'warn' | 'error';
-interface LogEntry {
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+export interface LogEntry {
   level: LogLevel;
   message: string;
   context?: {
@@ -23,7 +23,7 @@ interface LogEntry {
   };
   timestamp: Date;
 }
-type Logger = (entry: LogEntry) => void;
+export type Logger = (entry: LogEntry) => void;
 
 /**
  * Node.js環境でのウェブサイトテンプレートファイル処理ライブラリ
