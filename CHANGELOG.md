@@ -5,6 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2025-10-21
+
+### Fixed
+- Corrected `data-gen-include` examples to include proper file extensions (.html)
+- Fixed HTML template syntax in documentation to use correct gentl format
+- Improved grammar and sentence structure in README introduction
+- Enhanced section headers for better clarity
+
+### Changed
+- Updated feature description to specify JSON file processing: "データ（jsonファイル）をHTMLに変換"
+- Reorganized README sections for improved understanding of library purpose
+- Added comprehensive @c-time/gentl feature descriptions to clarify base library benefits
+- Polished language expressions throughout documentation
+
+### Documentation
+- Added detailed explanation of @c-time/gentl core features and characteristics
+- Improved API documentation consistency
+- Enhanced template examples with proper gentl syntax
+- Better organization of feature descriptions and use cases
+
 ## [1.0.0] - 2025-10-21
 
 ### Added
