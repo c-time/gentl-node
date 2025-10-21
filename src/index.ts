@@ -28,9 +28,10 @@ export type Logger = (entry: LogEntry) => void;
 /**
  * Node.js環境でのウェブサイトテンプレートファイル処理ライブラリ
  * jsdomとNodeのファイルシステムを利用
+ * rootDirectoryは出力ファイル専用のルートディレクトリとして機能
  */
 export class GentlNode {
-  private rootDir: string;
+  private rootDir: string; // 出力ファイル専用のルートディレクトリ
   private includeDir?: string;
   private options: Partial<GentlJOptions>;
   private fileContentCache: Record<string, string> = {}; // ファイル内容のキャッシュ
@@ -47,12 +48,13 @@ export class GentlNode {
       throw new Error('Root directory is required');
     }
     
+    // rootDirectoryは出力ファイル専用のルートディレクトリとして扱う
     this.rootDir = path.resolve(rootDirectory);
     
     const { includeDirectory, logger, includeNotFoundHandler, ...gentlOptions } = options || {};
     
-    // includeDirectoryが指定されている場合、ルートディレクトリからの相対パスとして処理
-    this.includeDir = includeDirectory ? path.resolve(this.rootDir, includeDirectory) : undefined;
+    // includeDirectoryが指定されている場合、絶対パスまたは現在の作業ディレクトリからの相対パスとして処理
+    this.includeDir = includeDirectory ? path.resolve(includeDirectory) : undefined;
     
     // includeファイルが見つからない場合のハンドラーを設定
     this.includeNotFoundHandler = includeNotFoundHandler;
@@ -126,14 +128,14 @@ export class GentlNode {
 
   /**
    * ベースデータを設定
-   * @param baseDataPath ベースデータのJSONファイルのパス（ルートディレクトリからの相対パス）
+   * @param baseDataPath ベースデータのJSONファイルのパス（絶対パスまたは現在の作業ディレクトリからの相対パス）
    */
   async setBaseData(baseDataPath: string): Promise<void> {
     this.log('info', `Setting base data from file: ${baseDataPath}`);
 
     try {
-      // パスを検証し、ルートディレクトリ内の絶対パスに変換
-      const resolvedBaseDataPath = this.validatePath(baseDataPath, 'Base data path');
+      // パスを絶対パスに変換（出力ルートディレクトリとは独立）
+      const resolvedBaseDataPath = path.resolve(baseDataPath);
 
       // ベースデータファイルを読み込み
       const baseDataContent = await fs.readFile(resolvedBaseDataPath, 'utf-8');
@@ -174,15 +176,15 @@ export class GentlNode {
   }
 
   /**
-   * パスがルートディレクトリ内にあるかを検証
+   * 出力パスが出力ルートディレクトリ内にあるかを検証
    */
-  private validatePath(filePath: string, description: string): string {
+  private validateOutputPath(filePath: string, description: string): string {
     const resolvedPath = path.resolve(this.rootDir, filePath);
     const relativePath = path.relative(this.rootDir, resolvedPath);
     
-    // パスがルートディレクトリの外に出ていないかチェック
+    // パスが出力ルートディレクトリの外に出ていないかチェック
     if (relativePath.startsWith('..') || path.isAbsolute(relativePath)) {
-      throw new Error(`${description} must be within the root directory: ${this.rootDir}`);
+      throw new Error(`${description} must be within the output root directory: ${this.rootDir}`);
     }
     
     return resolvedPath;
@@ -190,9 +192,9 @@ export class GentlNode {
 
   /**
    * 単一のHTMLファイルを生成
-   * @param templatePath HTMLテンプレートファイルのパス（ルートディレクトリからの相対パス）
-   * @param dataPath JSONデータファイルのパス（ルートディレクトリからの相対パス）
-   * @param outputPath 出力ファイルのパス（ルートディレクトリからの相対パス）
+   * @param templatePath HTMLテンプレートファイルのパス（絶対パスまたは現在の作業ディレクトリからの相対パス）
+   * @param dataPath JSONデータファイルのパス（絶対パスまたは現在の作業ディレクトリからの相対パス）
+   * @param outputPath 出力ファイルのパス（出力ルートディレクトリからの相対パス）
    */
   async generateFile(templatePath: string, dataPath: string, outputPath: string): Promise<void> {
     this.log('info', `Starting file generation`, {
@@ -200,10 +202,10 @@ export class GentlNode {
     });
 
     try {
-      // パスを検証し、ルートディレクトリ内の絶対パスに変換
-      const resolvedTemplatePath = this.validatePath(templatePath, 'Template path');
-      const resolvedDataPath = this.validatePath(dataPath, 'Data path');
-      const resolvedOutputPath = this.validatePath(outputPath, 'Output path');
+      // テンプレートとデータファイルは自由なパス、出力ファイルのみ出力ルートディレクトリ内に制限
+      const resolvedTemplatePath = path.resolve(templatePath);
+      const resolvedDataPath = path.resolve(dataPath);
+      const resolvedOutputPath = this.validateOutputPath(outputPath, 'Output path');
 
       this.log('debug', `Paths resolved`, {
         data: { resolvedTemplatePath, resolvedDataPath, resolvedOutputPath }
@@ -260,9 +262,9 @@ export class GentlNode {
 
   /**
    * 複数のHTMLファイルを生成
-   * @param templatePath HTMLテンプレートファイルのパス（ルートディレクトリからの相対パス）
-   * @param dataPath JSONファイルが格納されているディレクトリのパス（ルートディレクトリからの相対パス）
-   * @param outputDir 出力ディレクトリのパス（ルートディレクトリからの相対パス）
+   * @param templatePath HTMLテンプレートファイルのパス（絶対パスまたは現在の作業ディレクトリからの相対パス）
+   * @param dataPath JSONファイルが格納されているディレクトリのパス（絶対パスまたは現在の作業ディレクトリからの相対パス）
+   * @param outputDir 出力ディレクトリのパス（出力ルートディレクトリからの相対パス）
    * @param namingRule ファイル命名規則（例: "page-{index}.html", "item-{data.id}.html"）
    */
   async generateFiles(templatePath: string, dataPath: string, outputDir: string, namingRule: string): Promise<string[]> {
@@ -271,10 +273,10 @@ export class GentlNode {
     });
 
     try {
-      // パスを検証し、ルートディレクトリ内の絶対パスに変換
-      const resolvedTemplatePath = this.validatePath(templatePath, 'Template path');
-      const resolvedDataPath = this.validatePath(dataPath, 'Data path');
-      const resolvedOutputDir = this.validatePath(outputDir, 'Output directory');
+      // テンプレートとデータディレクトリは自由なパス、出力ディレクトリのみ出力ルートディレクトリ内に制限
+      const resolvedTemplatePath = path.resolve(templatePath);
+      const resolvedDataPath = path.resolve(dataPath);
+      const resolvedOutputDir = this.validateOutputPath(outputDir, 'Output directory');
 
       // テンプレートファイルを読み込み
       const html = await fs.readFile(resolvedTemplatePath, 'utf-8');

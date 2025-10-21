@@ -10,11 +10,11 @@ describe('GentlNode', () => {
   });
 
   describe('constructor', () => {
-    it('should create an instance of GentlNode with root directory', () => {
+    it('should create an instance of GentlNode with output root directory', () => {
       expect(gentlNode).toBeInstanceOf(GentlNode);
     });
 
-    it('should throw error if root directory is not provided', () => {
+    it('should throw error if output root directory is not provided', () => {
       expect(() => new GentlNode('')).toThrow('Root directory is required');
     });
 

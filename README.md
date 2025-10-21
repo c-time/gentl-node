@@ -24,17 +24,17 @@ npm install gentl-node
 ```typescript
 import { GentlNode } from 'gentl-node';
 
-const gentlNode = new GentlNode('./project-root', {
-  includeDirectory: 'includes',
+const gentlNode = new GentlNode('./output-root', {
+  includeDirectory: './includes',  // 絶対パスまたはカレントディレクトリからの相対パス
   deleteTemplateTag: true,
   deleteDataAttributes: true
 });
 
 // 単一HTMLファイルを生成
 await gentlNode.generateFile(
-  'templates/page.html',    // テンプレートファイル
-  'data/page-data.json',    // データファイル
-  'output/page.html'        // 出力ファイル
+  './templates/page.html',     // テンプレートファイル（カレントディレクトリから）
+  './data/page-data.json',     // データファイル（カレントディレクトリから）
+  'page.html'                  // 出力ファイル（出力ルートディレクトリから）
 );
 ```
 
@@ -43,14 +43,14 @@ await gentlNode.generateFile(
 ```typescript
 // データディレクトリ内のすべてのJSONファイルから複数HTMLを生成
 const generatedFiles = await gentlNode.generateFiles(
-  'templates/product.html',     // テンプレートファイル
-  'data/products',              // JSONファイルが格納されたディレクトリ
-  'output/products',            // 出力ディレクトリ
+  './templates/product.html',   // テンプレートファイル（カレントディレクトリから）
+  './data/products',            // JSONファイルが格納されたディレクトリ（カレントディレクトリから）
+  'products',                   // 出力ディレクトリ（出力ルートディレクトリから）
   'product-{data.id}.html'      // ファイル名規則
 );
 
 console.log('Generated files:', generatedFiles);
-// => ['product-001.html', 'product-002.html', ...]
+// => ['products/product-001.html', 'products/product-002.html', ...]
 ```
 
 ## API リファレンス
@@ -63,7 +63,7 @@ new GentlNode(rootDirectory: string, options?: GentlNodeOptions)
 
 #### パラメータ
 
-- **rootDirectory** `string` - プロジェクトのルートディレクトリ（必須）
+- **rootDirectory** `string` - 出力ファイル専用のルートディレクトリ（必須）
 - **options** `GentlNodeOptions` - 設定オプション（省略可能）
 
 #### GentlNodeOptions
@@ -84,9 +84,9 @@ type GentlNodeOptions = Partial<GentlJOptions> & {
 
 ```typescript
 generateFile(
-  templatePath: string, 
-  dataPath: string, 
-  outputPath: string
+  templatePath: string,   // 絶対パスまたは現在の作業ディレクトリからの相対パス
+  dataPath: string,       // 絶対パスまたは現在の作業ディレクトリからの相対パス  
+  outputPath: string      // 出力ルートディレクトリからの相対パス
 ): Promise<void>
 ```
 
@@ -96,9 +96,9 @@ generateFile(
 
 ```typescript
 generateFiles(
-  templatePath: string,
-  dataPath: string,
-  outputDir: string,
+  templatePath: string,   // 絶対パスまたは現在の作業ディレクトリからの相対パス
+  dataPath: string,       // 絶対パスまたは現在の作業ディレクトリからの相対パス
+  outputDir: string,      // 出力ルートディレクトリからの相対パス
   namingRule: string
 ): Promise<string[]>
 ```
@@ -112,7 +112,7 @@ generateFiles(
 
 ```typescript
 // ベースデータを設定（全てのファイル生成でマージされる）
-setBaseData(baseDataPath: string): Promise<void>
+setBaseData(baseDataPath: string): Promise<void>  // 絶対パスまたは現在の作業ディレクトリからの相対パス
 
 // 現在のベースデータを取得
 getBaseData(): object
@@ -224,36 +224,47 @@ project/
 
 ## セキュリティ
 
-- **パス検証**: すべてのファイルパスはルートディレクトリ内に制限されます
-- **ディレクトリトラバーサル防止**: `../` などによる上位ディレクトリへのアクセスを防止
+- **出力パス検証**: 出力ファイルのパスは出力ルートディレクトリ内に制限されます
+- **ディレクトリトラバーサル防止**: `../` などによる出力ルートディレクトリ外へのアクセスを防止
+- **入力ファイル自由度**: テンプレートファイルとデータファイルは任意の場所から読み込み可能
 - **型安全性**: TypeScriptによる型チェックでランタイムエラーを削減
 
 ## ファイル構造例
 
 ```
-my-website/
-├── templates/
+my-project/
+├── templates/              # テンプレートファイル（任意の場所）
 │   ├── index.html
 │   └── product.html
-├── includes/
+├── includes/               # includeファイル（任意の場所）
 │   ├── nav.html
 │   ├── footer.html
 │   └── components/
 │       ├── card.html
 │       └── button.html
-├── data/
+├── data/                   # データファイル（任意の場所）
 │   ├── base.json          # ベースデータ（全ファイル共通）
 │   ├── index.json
 │   └── products/
 │       ├── product-1.json
 │       ├── product-2.json
 │       └── product-3.json
-└── output/
+└── dist/                   # 出力専用ディレクトリ（出力ルートディレクトリ）
     ├── index.html
     └── products/
         ├── product-1.html
         ├── product-2.html
         └── product-3.html
+```
+
+**使用例:**
+```typescript
+const gentlNode = new GentlNode('./dist', {
+  includeDirectory: './includes'
+});
+
+await gentlNode.setBaseData('./data/base.json');
+await gentlNode.generateFile('./templates/index.html', './data/index.json', 'index.html');
 ```
 
 **data/base.json の例:**
@@ -312,7 +323,7 @@ try {
 ```
 
 よくあるエラー：
-- ルートディレクトリ外のファイルアクセス
+- 出力ルートディレクトリ外への出力アクセス試行
 - 存在しないテンプレート・データファイル
 - 不正なJSONデータ
 - includeファイル未発見（ハンドラー未設定時）
