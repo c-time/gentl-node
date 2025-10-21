@@ -1,25 +1,29 @@
 # gentl-node
 
-Node.js環境でのウェブサイトテンプレートファイル処理ライブラリです。[@c-time/gentl](https://www.npmjs.com/package/@c-time/gentl)をラップし、jsdomとNodeのファイルシステムを利用してHTMLの生成を行います。
+**WEB制作専用HTMLジェネレータ**です。
 
-## @c-time/gentlの特徴
+担当者や制作会社が変わっても混乱を招かない、セキュアでWEB制作現場に寄り添ったシンプルなHTMLジェネレータです。
 
-このライブラリは[@c-time/gentl](https://github.com/c-time/gentl) - WEB制作専用HTMLジェネレータ - をベースとしており、以下の特徴を継承しています：
+## @c-time/gentlから受け継ぐ特徴
+
+このライブラリは[@c-time/gentl](https://github.com/c-time/gentl) - **WEB制作専用HTMLジェネレータ** - をベースとしており、以下の特徴を継承しています：
 
 - **🎯 ジェネレートに特化**: データをHTMLに変換することに特化し、ビジネスロジックをテンプレートから分離してセキュリティとデバッグのしやすさを担保
 - **🛡️ HTMLに破壊的な構造変化をさせない**: `<template>`タグによる非破壊的な展開でDOM構造を保護。生成後のHTMLも再びテンプレートとして再利用可能
-- **🪶 軽量**: 依存関係ゼロのコアシステムで高いパフォーマンス
+- **🪶 軽量**: 依存関係が最小限で高いパフォーマンス
 - **🔧 完全環境非依存**: JSDOM、Happy DOM、ブラウザ環境など任意のDOM環境に対応
-- **⚡ ブラウザでのダイナミック使用も可能**: 静的生成とブラウザでのダイナミック読み込みの両方に対応
+- **⚡ ダイナミック利用に対応**: 作り込んだテンプレートは、静的生成とブラウザでのダイナミック読み込みの両方に対応
 
-## 特徴（gentl-nodeの追加機能）
+## 動作概要
 
-- 🚀 **高性能**: ファイル内容のキャッシュ機能で高速処理
+Node.js環境でのウェブサイトテンプレートファイル処理ライブラリです。[@c-time/gentl](https://www.npmjs.com/package/@c-time/gentl)をラップし、jsdomとNodeのファイルシステムを利用してHTMLを生成します。
+
+## gentl-nodeの追加機能
+
+- 🚀 **高性能**: ファイル内容のキャッシュ機能による高速処理
 - 🔒 **セキュア**: ルートディレクトリベースのパス検証でディレクトリトラバーサル攻撃を防止
-- 📁 **柔軟な構造**: 再帰的なincludeディレクトリサポート
-- 📝 **包括的ログ**: gentlに準じた詳細なログ機能
 - ⚡ **バッチ処理**: JSONファイルから複数HTMLファイルの一括生成
-- 🛡️ **エラーハンドリング**: includeファイル未発見時のカスタムハンドラー対応
+- 🛡️ **ファイルIOハンドリング**: includeファイル未発見時のカスタムハンドラー対応
 
 ## インストール
 
@@ -219,14 +223,16 @@ project/
     <title>My Page</title>
 </head>
 <body>
-    <div data-gentl-include="header.html"></div>
+    <template data-gen-scope="" data-gen-include="header"></template>
     
     <main>
-        <h1 data-gentl-text="title">Page Title</h1>
-        <div data-gentl-include="components/button.html"></div>
+        <template data-gen-scope="">
+            <h1 data-gen-text="title">Page Title</h1>
+        </template>
+        <template data-gen-scope="" data-gen-include="components/button"></template>
     </main>
     
-    <div data-gentl-include="footer.html"></div>
+    <template data-gen-scope="" data-gen-include="footer"></template>
 </body>
 </html>
 ```
